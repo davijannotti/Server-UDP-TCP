@@ -1,3 +1,4 @@
+#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -69,6 +70,22 @@ void start_udp_client() {
     // Medir o tempo de transferência
     start = clock();
 
+    int retry_count = 3; // Número de tentativas para receber o tamanho esperado
+    for (int attempt = 0; attempt < retry_count; attempt++) {
+        sendto(client_fd, "GET_COUNT", 9, 0, (struct sockaddr *)&server_addr, server_addr_len);
+                                
+        bytes_received = recvfrom(client_fd, &expected_packet_count, sizeof(expected_packet_count), 0, (struct sockaddr *)&server_addr, &server_addr_len);
+        if (bytes_received > 0) {
+            printf("Contagem de pacotes esperados recebida: %d\n", ntohl(expected_packet_count));
+            break;
+        }
+    
+        if (attempt == retry_count - 1) {
+            printf("Não foi possível obter a contagem de pacotes esperados. Estimando com base nos pacotes recebidos.\n");
+            expected_packet_count = 0; // Desabilitar comparações no final
+        }
+    }
+    
     // Receber pacotes do servidor
     while (1) {
         FD_ZERO(&read_fds);
@@ -84,8 +101,7 @@ void start_udp_client() {
                 // Se o pacote contém a mensagem de fim
                 if (strncmp(buffer, "FIM", 3) == 0) {
                     sscanf(buffer, "FIM %df", &expected_packet_count);
-                    printf("pacotes: %d\n", expected_packet_count);
-                    printf("Servidor terminou de enviar. %s\n", buffer);
+                    printf("Servidor terminou de enviar.\n");
                     break;
                 }
 
