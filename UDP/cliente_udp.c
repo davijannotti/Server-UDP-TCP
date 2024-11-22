@@ -124,11 +124,12 @@ void start_udp_client() {
 
     // Calcular a perda de pacotes
     packet_loss = expected_packet_count - packets_received;
-
+    float loss_percentage = (float)packet_loss/expected_packet_count;
+    
     printf("Transferência concluída.\n");
     printf("Total de pacotes recebidos: %d\n", packets_received);
     printf("Pacotes esperados: %d\n", expected_packet_count);
-    printf("Perda de pacotes: %d\n", packet_loss);
+    printf("Perda de pacotes: %.2f%% \n", loss_percentage);
     printf("Taxa de download: %.2f bytes/segundo\n", download_rate);
 
     fclose(file);

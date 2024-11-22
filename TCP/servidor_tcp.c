@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <sys/socket.h>
@@ -10,6 +9,8 @@
 #define BUFFER_SIZE 1024
 
 void start_tcp_server();
+
+unsigned long calculate_checksum(FILE *file);
 
 int main() {
     start_tcp_server();
@@ -24,6 +25,7 @@ void start_tcp_server() {
     FILE *file;
     size_t bytes_read;
     long file_size;
+    unsigned long checksum;
 
     // Criar o socket TCP
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -77,8 +79,13 @@ void start_tcp_server() {
     file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    // Enviar o tamanho do arquivo para o cliente
+    // Calcular o checksum do arquivo
+    checksum = calculate_checksum(file);
+    fseek(file, 0, SEEK_SET);
+
+    // Enviar o tamanho do arquivo e o checksum para o cliente
     write(client_fd, &file_size, sizeof(file_size));
+    write(client_fd, &checksum, sizeof(checksum));
 
     // Enviar arquivo em pacotes
     while ((bytes_read = fread(buffer, 1, sizeof(buffer), file)) > 0) {
@@ -96,4 +103,15 @@ void start_tcp_server() {
     fclose(file);
     close(client_fd);
     close(server_fd);
+}
+
+unsigned long calculate_checksum(FILE *file) {
+    unsigned long checksum = 0;
+    unsigned char byte;
+
+    while (fread(&byte, 1, 1, file) == 1) {
+        checksum += byte;
+    }
+
+    return checksum;
 }
