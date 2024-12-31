@@ -55,15 +55,13 @@ void enqueue_task(int client_fd) {
     pthread_mutex_lock(&lock);
 
     // Evitar sobrescrita na fila
-    if (count == QUEUE_SIZE) {
-        printf("Queue is full, dropping connection.\n");
-        close(client_fd);
-    } else {
-        task_queue[rear] = client_fd;
-        rear = (rear + 1) % QUEUE_SIZE;
-        count++;
-        pthread_cond_signal(&cond);
+    while (count == QUEUE_SIZE) {
+        pthread_cond_wait(&cond, &lock); // Espera se a fila estiver cheia
     }
+    task_queue[rear] = client_fd;
+    rear = (rear + 1) % QUEUE_SIZE;
+    count++;
+    pthread_cond_signal(&cond);
 
     pthread_mutex_unlock(&lock);
 }
@@ -80,6 +78,7 @@ void *thread_worker(void *arg) {
         front = (front + 1) % QUEUE_SIZE;
         count--;
 
+        pthread_cond_signal(&cond);
         pthread_mutex_unlock(&lock);
 
         char buffer[BUF_SIZE] = {0};
